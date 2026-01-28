@@ -1,4 +1,4 @@
-﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Lumina.Excel;
@@ -16,10 +16,10 @@ namespace StarlightBreaker
 
         internal bool ShowUpdateTips = false;
 
-        public ConfigWindow(Plugin plugin) : base(Plugin.Name, ImGuiWindowFlags.NoResize)
+        public ConfigWindow(Plugin plugin) : base(Plugin.Name, ImGuiWindowFlags.AlwaysAutoResize)
         {
             //Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoResize;
-            Size = new Num.Vector2(400, 300);
+            SizeConstraints = new WindowSizeConstraints { MinimumSize = new Num.Vector2(400, 300) };
             this.Plugin = plugin;
             this.config = this.Plugin.Configuration;
         }
@@ -27,9 +27,7 @@ namespace StarlightBreaker
         {
             if (this.ShowUpdateTips)
             {
-                ImGui.Text("由于版本更新，旧设置失效，请重新设置。");
-                ImGui.Text("新版本已解决未开反屏蔽的玩家会看到空白招募的问题");
-                ImGui.Text("当系统提示处理招募失败时，请检查招募文本的词语");
+                ImGui.Text("如果遇到招募崩溃,可以禁用招募板设置,并通过插件旁的反馈按钮进行反馈");
             }
             var needSave = false;
             if (ImGui.CollapsingHeader("聊天栏设置", ImGuiTreeNodeFlags.DefaultOpen))

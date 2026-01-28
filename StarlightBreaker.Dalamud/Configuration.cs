@@ -1,4 +1,4 @@
-﻿using Dalamud.Configuration;
+using Dalamud.Configuration;
 using System;
 
 namespace StarlightBreaker
@@ -26,7 +26,8 @@ namespace StarlightBreaker
     [Serializable]
     public class Configuration : IPluginConfiguration
     {
-        public int Version { get; set; } = 1;
+        public static readonly int CurrentVersion = 2;
+        public int Version { get; set; } = Configuration.CurrentVersion;
 
         public ChatLogConfig ChatLogConfig { get; set; } = new();
         public PartyFinderConfig PartyFinderConfig { get; set; } = new();

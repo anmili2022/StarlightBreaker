@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.Command;
+using Dalamud.Game.Command;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
@@ -114,11 +114,13 @@ namespace StarlightBreaker
             //E8 ?? ?? ?? ?? 0F B6 BB ?? ?? ?? ?? 40 84 FF 74 ?? 48 8D 15
             //当出现无法处理招募的时候检查文本并显示导致无法发送的地方
 
-            if (this.Configuration.Version == 0)
+            if (this.Configuration.Version != Configuration.CurrentVersion)
             {
                 this.ConfigWindow.IsOpen = true;
                 this.ConfigWindow.ShowUpdateTips = true;
-                this.Configuration.Version = 1;
+                this.Configuration.PartyFinderConfig.Enable = false;
+                this.Configuration.PartyFinderConfig.EnableColor = false;
+                this.Configuration.Version = Configuration.CurrentVersion;
                 this.Configuration.Save();
             }
         }
