@@ -34,16 +34,10 @@ namespace StarlightBreaker
         [PluginService]
         internal static ICommandManager CommandManager { get; private set; } = null!;
         [PluginService]
-        internal static IClientState ClientState { get; private set; } = null!;
-        [PluginService]
-        internal static IChatGui ChatGui { get; private set; } = null!;
-        [PluginService]
         internal static IDataManager DataManager { get; private set; } = null!;
 
         [PluginService]
         internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
-        [PluginService]
-        internal static IPlayerState PlayerState { get; private set; } = null!;
 
         [PluginService]
         internal static IPluginLog PluginLog { get; private set; } = null!;
@@ -134,7 +128,6 @@ namespace StarlightBreaker
                     if (this.Configuration.FontConfig.Italics || this.Configuration.FontConfig.EnableColor)
                     {
                         var original = IMemorySpace.GetDefaultSpace()->Create<Utf8String>();
-                        original->Ctor();
                         original->Copy(text);
                         RaptureTextModulePartyFinderFilterOrigin(textModule, text, unk, unk1);
                         HighlightCensoredParts(original, text, this.Configuration.FontConfig.Italics, this.Configuration.FontConfig.EnableColor, this.Configuration.FontConfig.Color);
@@ -183,7 +176,6 @@ namespace StarlightBreaker
                     if (this.Configuration.FontConfig.Italics || this.Configuration.FontConfig.EnableColor)
                     {
                         var original = IMemorySpace.GetDefaultSpace()->Create<Utf8String>();
-                        original->Ctor();
                         original->Copy(text);
                         var ret = this.AgentLookingForGroupTextFilterHook.Original(agent, text);
                         if (text->EqualTo(original))
