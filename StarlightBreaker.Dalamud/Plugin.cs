@@ -1,3 +1,4 @@
+using System;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
@@ -16,6 +17,7 @@ using InteropGenerator.Runtime;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using UTF8String = FFXIVClientStructs.FFXIV.Client.System.String.Utf8String;
@@ -29,8 +31,6 @@ namespace StarlightBreaker
 
         [PluginService]
         internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
-        [PluginService]
-        internal static ISigScanner Scanner { get; private set; } = null!;
         [PluginService]
         internal static ICommandManager CommandManager { get; private set; } = null!;
         [PluginService]
@@ -92,7 +92,7 @@ namespace StarlightBreaker
             this.AgentLookingForGroupTextFilterHook = GameInteropProvider.HookFromSignature<AgentLookingForGroupTextFilterDelegate>("48 89 5C 24 ?? 57 48 83 EC 20 C6 81 ?? ?? ?? ?? ?? 48 8B D9 48 8B 49 10 48 8B FA", this.AgentLookingForGroupTextFilterDetour);
             this.AgentLookingForGroupTextFilterHook.Enable();
 
-            var hookAddress = Scanner.ScanAllText("E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 ?? 48 8D 15").First();
+            var hookAddress = ScanAllText("E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 ?? 48 8D 15").First();
             PluginLog.Debug($"AgentLookingForGroupDetailedWindowTextFilterHook:{Util.DescribeAddress(hookAddress)}");
             this.AgentLookingForGroupDetailedWindowTextFilterHook = new CallHook<RaptureTextModulePartyFinderFilterDelegate>(hookAddress, RaptureTextModulePartyFinderFilter);
             this.AgentLookingForGroupDetailedWindowTextFilterHook?.Enable();
@@ -101,7 +101,7 @@ namespace StarlightBreaker
             //由于"E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 11"和"E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 ?? 48 8D 15"是同一地址的不同签名ffxiv_dx11.exe+0x5419A3 函数地址为ffxiv_dx11.exe+0x97B820
             //之前的版本已经被Hook，因此开头不再是E9或E8,因此后面的ScanText会返回ffxiv_dx11.exe+0x5419A3,而不是0x97B820
             //var raptureTextModulePartyFinderFilterAddress = Scanner.ScanText("E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 11");
-            var raptureTextModulePartyFinderFilterAddress = Scanner.ScanText("40 53 56 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B F9 49 8B F0");
+            var raptureTextModulePartyFinderFilterAddress = ScanText("40 53 56 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B F9 49 8B F0");
             PluginLog.Debug($"RaptureTextModulePartyFinderFilter:{Util.DescribeAddress(raptureTextModulePartyFinderFilterAddress)}");
             this.RaptureTextModulePartyFinderFilterOrigin = Marshal.GetDelegateForFunctionPointer<RaptureTextModulePartyFinderFilterDelegate>(raptureTextModulePartyFinderFilterAddress);
             //TODO:
@@ -195,6 +195,40 @@ namespace StarlightBreaker
 
         private void DrawUI() => WindowSystem.Draw();
         public void ToggleConfigUI() => ConfigWindow.Toggle();
+
+        private static IntPtr ScanText(string signature)
+        {
+            var scanner = ResolveSigScanner();
+            var method = scanner.GetType().GetMethod(nameof(ScanText), BindingFlags.Instance | BindingFlags.Public, [typeof(string)])
+                ?? throw new MissingMethodException(scanner.GetType().FullName, nameof(ScanText));
+
+            return (IntPtr)(method.Invoke(scanner, [signature])
+                ?? throw new InvalidOperationException($"Scanner.{nameof(ScanText)} returned null."));
+        }
+
+        private static IEnumerable<IntPtr> ScanAllText(string signature)
+        {
+            var scanner = ResolveSigScanner();
+            var method = scanner.GetType().GetMethod(nameof(ScanAllText), BindingFlags.Instance | BindingFlags.Public, [typeof(string)])
+                ?? throw new MissingMethodException(scanner.GetType().FullName, nameof(ScanAllText));
+
+            if (method.Invoke(scanner, [signature]) is not Array matches)
+                throw new InvalidOperationException($"Scanner.{nameof(ScanAllText)} returned an unexpected result.");
+
+            return matches.Cast<object>().Select(x => (IntPtr)x);
+        }
+
+        private static object ResolveSigScanner()
+        {
+            var providerType = GameInteropProvider.GetType();
+            var scannerField = providerType.GetField("scanner", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? providerType
+                    .GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                    .FirstOrDefault(x => x.FieldType.Name.Contains("SigScanner", StringComparison.Ordinal));
+
+            return scannerField?.GetValue(GameInteropProvider)
+                ?? throw new InvalidOperationException($"Could not resolve an internal scanner from {providerType.FullName}.");
+        }
 
         private void OnCommand(string command, string arguments)
         {
