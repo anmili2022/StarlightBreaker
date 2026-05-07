@@ -15,7 +15,7 @@
 - Adapted the plugin to the current API 15 environment used by `XIVLauncherCN`
 - Fixed the plugin loading failure caused by building against the wrong local Dalamud installation
 - Removed direct plugin-service injection of the scanner type, because the runtime-exposed scanner API differs across local Dalamud builds
-- Switched scanner access to a reflection bridge through `IGameInteropProvider`, which is stable in the current environment
+- Switched signature resolution to `IGameInteropProvider.InitializeFromAttributes(...)` with `SignatureAttribute`, which uses the documented public API and avoids private reflection over internal scanner fields
 - Fixed local reference resolution by pinning the project to `$(AppData)\XIVLauncherCN\addon\Hooks\dev\`
 - Corrected windowing compatibility so the built assembly now targets `WindowSystem.AddWindow(IWindow)` instead of the old `Window` signature
 - Updated new-config defaults so these options start enabled:

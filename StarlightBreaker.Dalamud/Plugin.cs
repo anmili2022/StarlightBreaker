@@ -8,18 +8,14 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
+using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.System.Memory;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.Text;
 using InteropGenerator.Runtime;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
 using UTF8String = FFXIVClientStructs.FFXIV.Client.System.String.Utf8String;
 
 namespace StarlightBreaker
@@ -58,18 +54,23 @@ namespace StarlightBreaker
         //private VulgarCheckDelegate VulgarCheck;
 
         public delegate Utf8String* RaptureTextModuleChatLogFilterDelegate(RaptureTextModule* textModule, Utf8String* text, nint unk, uint bytesNum);
-        Hook<RaptureTextModuleChatLogFilterDelegate> RaptureTextModuleChatLogFilterHook;
+        [Signature("40 53 48 83 EC 20 48 8D 99 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 8B 0D", DetourName = nameof(RaptureTextModuleChatLogFilterDetour))]
+        private Hook<RaptureTextModuleChatLogFilterDelegate> RaptureTextModuleChatLogFilterHook = null!;
 
         public delegate uint AgentLookingForGroupTextFilterDelegate(AgentLookingForGroup* agent, Utf8String* text);
-        Hook<AgentLookingForGroupTextFilterDelegate> AgentLookingForGroupTextFilterHook;
+        [Signature("48 89 5C 24 ?? 57 48 83 EC 20 C6 81 ?? ?? ?? ?? ?? 48 8B D9 48 8B 49 10 48 8B FA", DetourName = nameof(AgentLookingForGroupTextFilterDetour))]
+        private Hook<AgentLookingForGroupTextFilterDelegate> AgentLookingForGroupTextFilterHook = null!;
 
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
         public delegate void RaptureTextModulePartyFinderFilterDelegate(RaptureTextModule* textModule, Utf8String* text, nint unk, bool unk1);
-        private RaptureTextModulePartyFinderFilterDelegate RaptureTextModulePartyFinderFilterOrigin;
-        private CallHook<RaptureTextModulePartyFinderFilterDelegate> AgentLookingForGroupDetailedWindowTextFilterHook;
+        private RaptureTextModulePartyFinderFilterDelegate RaptureTextModulePartyFinderFilterOrigin = null!;
+        private CallHook<RaptureTextModulePartyFinderFilterDelegate> AgentLookingForGroupDetailedWindowTextFilterHook = null!;
 
-        public delegate Utf8String* AgentLookingForGroupProcessStringDelegate(AgentLookingForGroup* agent, Utf8String* text, uint bytesNum);
-        Hook<AgentLookingForGroupProcessStringDelegate> AgentLookingForGroupProcessStringHook;
+        [Signature("E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 ?? 48 8D 15", UseFlags = SignatureUseFlags.Pointer)]
+        private IntPtr AgentLookingForGroupDetailedWindowTextFilterHookAddress = IntPtr.Zero;
+
+        [Signature("40 53 56 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B F9 49 8B F0", UseFlags = SignatureUseFlags.Pointer)]
+        private IntPtr RaptureTextModulePartyFinderFilterAddress = IntPtr.Zero;
 
         public unsafe Plugin()
         {
@@ -86,24 +87,22 @@ namespace StarlightBreaker
                 HelpMessage = "Open Config Window for StarlightBreaker"
             });
 
-            this.RaptureTextModuleChatLogFilterHook = GameInteropProvider.HookFromSignature<RaptureTextModuleChatLogFilterDelegate>("40 53 48 83 EC 20 48 8D 99 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 8B 0D", this.RaptureTextModuleChatLogFilterDetour);
+            GameInteropProvider.InitializeFromAttributes(this);
+
             this.RaptureTextModuleChatLogFilterHook.Enable();
 
-            this.AgentLookingForGroupTextFilterHook = GameInteropProvider.HookFromSignature<AgentLookingForGroupTextFilterDelegate>("48 89 5C 24 ?? 57 48 83 EC 20 C6 81 ?? ?? ?? ?? ?? 48 8B D9 48 8B 49 10 48 8B FA", this.AgentLookingForGroupTextFilterDetour);
             this.AgentLookingForGroupTextFilterHook.Enable();
 
-            var hookAddress = ScanAllText("E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 ?? 48 8D 15").First();
-            PluginLog.Debug($"AgentLookingForGroupDetailedWindowTextFilterHook:{Util.DescribeAddress(hookAddress)}");
-            this.AgentLookingForGroupDetailedWindowTextFilterHook = new CallHook<RaptureTextModulePartyFinderFilterDelegate>(hookAddress, RaptureTextModulePartyFinderFilter);
+            PluginLog.Debug($"AgentLookingForGroupDetailedWindowTextFilterHook:{Util.DescribeAddress(this.AgentLookingForGroupDetailedWindowTextFilterHookAddress)}");
+            this.AgentLookingForGroupDetailedWindowTextFilterHook = new CallHook<RaptureTextModulePartyFinderFilterDelegate>(this.AgentLookingForGroupDetailedWindowTextFilterHookAddress, RaptureTextModulePartyFinderFilter);
             this.AgentLookingForGroupDetailedWindowTextFilterHook?.Enable();
 
 
             //由于"E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 11"和"E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 ?? 48 8D 15"是同一地址的不同签名ffxiv_dx11.exe+0x5419A3 函数地址为ffxiv_dx11.exe+0x97B820
             //之前的版本已经被Hook，因此开头不再是E9或E8,因此后面的ScanText会返回ffxiv_dx11.exe+0x5419A3,而不是0x97B820
             //var raptureTextModulePartyFinderFilterAddress = Scanner.ScanText("E8 ?? ?? ?? ?? 44 38 A3 ?? ?? ?? ?? 74 11");
-            var raptureTextModulePartyFinderFilterAddress = ScanText("40 53 56 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B F9 49 8B F0");
-            PluginLog.Debug($"RaptureTextModulePartyFinderFilter:{Util.DescribeAddress(raptureTextModulePartyFinderFilterAddress)}");
-            this.RaptureTextModulePartyFinderFilterOrigin = Marshal.GetDelegateForFunctionPointer<RaptureTextModulePartyFinderFilterDelegate>(raptureTextModulePartyFinderFilterAddress);
+            PluginLog.Debug($"RaptureTextModulePartyFinderFilter:{Util.DescribeAddress(this.RaptureTextModulePartyFinderFilterAddress)}");
+            this.RaptureTextModulePartyFinderFilterOrigin = Marshal.GetDelegateForFunctionPointer<RaptureTextModulePartyFinderFilterDelegate>(this.RaptureTextModulePartyFinderFilterAddress);
             //TODO:
             //E8 ?? ?? ?? ?? 0F B6 BB ?? ?? ?? ?? 40 84 FF 74 ?? 48 8D 15
             //当出现无法处理招募的时候检查文本并显示导致无法发送的地方
@@ -196,40 +195,6 @@ namespace StarlightBreaker
         private void DrawUI() => WindowSystem.Draw();
         public void ToggleConfigUI() => ConfigWindow.Toggle();
 
-        private static IntPtr ScanText(string signature)
-        {
-            var scanner = ResolveSigScanner();
-            var method = scanner.GetType().GetMethod(nameof(ScanText), BindingFlags.Instance | BindingFlags.Public, [typeof(string)])
-                ?? throw new MissingMethodException(scanner.GetType().FullName, nameof(ScanText));
-
-            return (IntPtr)(method.Invoke(scanner, [signature])
-                ?? throw new InvalidOperationException($"Scanner.{nameof(ScanText)} returned null."));
-        }
-
-        private static IEnumerable<IntPtr> ScanAllText(string signature)
-        {
-            var scanner = ResolveSigScanner();
-            var method = scanner.GetType().GetMethod(nameof(ScanAllText), BindingFlags.Instance | BindingFlags.Public, [typeof(string)])
-                ?? throw new MissingMethodException(scanner.GetType().FullName, nameof(ScanAllText));
-
-            if (method.Invoke(scanner, [signature]) is not Array matches)
-                throw new InvalidOperationException($"Scanner.{nameof(ScanAllText)} returned an unexpected result.");
-
-            return matches.Cast<object>().Select(x => (IntPtr)x);
-        }
-
-        private static object ResolveSigScanner()
-        {
-            var providerType = GameInteropProvider.GetType();
-            var scannerField = providerType.GetField("scanner", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? providerType
-                    .GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-                    .FirstOrDefault(x => x.FieldType.Name.Contains("SigScanner", StringComparison.Ordinal));
-
-            return scannerField?.GetValue(GameInteropProvider)
-                ?? throw new InvalidOperationException($"Could not resolve an internal scanner from {providerType.FullName}.");
-        }
-
         private void OnCommand(string command, string arguments)
         {
             ToggleConfigUI();
@@ -267,21 +232,27 @@ namespace StarlightBreaker
 
                 var origText = (TextPayload)orig;
                 var procText = (TextPayload)proc;
+                var origStr = origText.Text;
+                var procStr = procText.Text;
 
-                if (origText.Text == procText.Text)
+                if (origStr is null || procStr is null)
                 {
                     builder.Add(origText);
                     continue;
                 }
 
-                if (origText.Text.Length != procText.Text.Length)
+                if (origStr == procStr)
                 {
                     builder.Add(origText);
                     continue;
                 }
 
-                string origStr = origText.Text;
-                string procStr = procText.Text;
+                if (origStr.Length != procStr.Length)
+                {
+                    builder.Add(origText);
+                    continue;
+                }
+
                 int length = origStr.Length;
                 int j = 0;
 

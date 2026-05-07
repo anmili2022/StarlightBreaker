@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 	<PropertyGroup>
 		<Name>StarlightBreaker</Name>
-		<Version>2.15.0</Version>
+		<Version>2.15.1</Version>
 		<!-- Prefer XIVLauncherCN locally; CI falls back to the SDK default or DALAMUD_HOME. -->
 		<DalamudLibPath Condition="'$(DALAMUD_HOME)' == '' and Exists('$(AppData)\XIVLauncherCN\addon\Hooks\dev\')">$(AppData)\XIVLauncherCN\addon\Hooks\dev\</DalamudLibPath>
 		<TargetFramework>net10.0-windows</TargetFramework>
