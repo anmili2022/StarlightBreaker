@@ -2,16 +2,19 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 	<PropertyGroup>
 		<Name>StarlightBreaker</Name>
-		<Version>2.15.1</Version>
+		<Version>2.15.2</Version>
 		<!-- Prefer XIVLauncherCN locally; CI falls back to the SDK default or DALAMUD_HOME. -->
 		<DalamudLibPath Condition="'$(DALAMUD_HOME)' == '' and Exists('$(AppData)\XIVLauncherCN\addon\Hooks\dev\')">$(AppData)\XIVLauncherCN\addon\Hooks\dev\</DalamudLibPath>
 		<TargetFramework>net10.0-windows</TargetFramework>
 		<AssemblySearchPaths>{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory};{RawFileName};$(DalamudLibPath)</AssemblySearchPaths>
 		<Author>Loskh</Author>
-		<Punchline>关闭屏蔽词过滤,并特殊显示聊天频道或招募板上发出的屏蔽词</Punchline>
-		<Description>关闭屏蔽词过滤,并特殊显示聊天频道或招募板上发出的屏蔽词</Description>
+		<Punchline>解除聊天日志和招募板中的屏蔽词显示</Punchline>
+		<Description>解除聊天日志与招募板中的屏蔽词过滤，并可选择用颜色和斜体高亮被替换的文本片段，方便阅读、排查和分享内容。</Description>
+		<Tags>chat;party-finder;filter;censorship;uncensor</Tags>
+		<CategoryTags>chat;party-finder;filter</CategoryTags>
 		<PackageProjectUrl>https://github.com/anmili2022/StarlightBreaker</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/anmili2022/StarlightBreaker</RepositoryUrl>
+		<RepoUrl>https://github.com/anmili2022/StarlightBreaker</RepoUrl>
+		<IconUrl>https://raw.githubusercontent.com/anmili2022/StarlightBreaker/main/StarlightBreaker.Dalamud/icon.png</IconUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<IsPackable>false</IsPackable>
 		<OutputPath>..\Output\</OutputPath>
