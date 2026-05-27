@@ -57,10 +57,6 @@ namespace StarlightBreaker
         [Signature("40 53 48 83 EC 20 48 8D 99 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 8B 0D", DetourName = nameof(RaptureTextModuleChatLogFilterDetour))]
         private Hook<RaptureTextModuleChatLogFilterDelegate> RaptureTextModuleChatLogFilterHook = null!;
 
-        public delegate uint AgentLookingForGroupTextFilterDelegate(AgentLookingForGroup* agent, Utf8String* text);
-        [Signature("48 89 5C 24 ?? 57 48 83 EC 20 C6 81 ?? ?? ?? ?? ?? 48 8B D9 48 8B 49 10 48 8B FA", DetourName = nameof(AgentLookingForGroupTextFilterDetour))]
-        private Hook<AgentLookingForGroupTextFilterDelegate> AgentLookingForGroupTextFilterHook = null!;
-
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
         public delegate void RaptureTextModulePartyFinderFilterDelegate(RaptureTextModule* textModule, Utf8String* text, nint unk, bool unk1);
         private RaptureTextModulePartyFinderFilterDelegate RaptureTextModulePartyFinderFilterOrigin = null!;
@@ -90,8 +86,6 @@ namespace StarlightBreaker
             GameInteropProvider.InitializeFromAttributes(this);
 
             this.RaptureTextModuleChatLogFilterHook.Enable();
-
-            this.AgentLookingForGroupTextFilterHook.Enable();
 
             PluginLog.Debug($"AgentLookingForGroupDetailedWindowTextFilterHook:{Util.DescribeAddress(this.AgentLookingForGroupDetailedWindowTextFilterHookAddress)}");
             this.AgentLookingForGroupDetailedWindowTextFilterHook = new CallHook<RaptureTextModulePartyFinderFilterDelegate>(this.AgentLookingForGroupDetailedWindowTextFilterHookAddress, RaptureTextModulePartyFinderFilter);
@@ -164,32 +158,6 @@ namespace StarlightBreaker
                 return this.RaptureTextModuleChatLogFilterHook.Original(textModule, text, unk, bytesNum);
             }
 
-        }
-
-        private uint AgentLookingForGroupTextFilterDetour(AgentLookingForGroup* agent, UTF8String* text)
-        {
-            if (this.Configuration.PartyFinderConfig.Enable)
-            {
-                if (this.Configuration.PartyFinderConfig.EnableColor)
-                {
-                    if (this.Configuration.FontConfig.Italics || this.Configuration.FontConfig.EnableColor)
-                    {
-                        var original = IMemorySpace.GetDefaultSpace()->Create<Utf8String>();
-                        original->Copy(text);
-                        var ret = this.AgentLookingForGroupTextFilterHook.Original(agent, text);
-                        if (text->EqualTo(original))
-                            return ret;
-                        HighlightCensoredParts(original, text, this.Configuration.FontConfig.Italics, this.Configuration.FontConfig.EnableColor, this.Configuration.FontConfig.Color);
-                        original->Dtor(true);
-                    }
-                }
-                return 0;
-            }
-            else
-            {
-                var ret = this.AgentLookingForGroupTextFilterHook.Original(agent, text);
-                return ret;
-            }
         }
 
         private void DrawUI() => WindowSystem.Draw();
@@ -292,7 +260,6 @@ namespace StarlightBreaker
 
         public void Dispose()
         {
-            this.AgentLookingForGroupTextFilterHook?.Dispose();
             this.RaptureTextModuleChatLogFilterHook?.Dispose()  ;
             AgentLookingForGroupDetailedWindowTextFilterHook?.Disable();
             this.AgentLookingForGroupDetailedWindowTextFilterHook?.Dispose();
