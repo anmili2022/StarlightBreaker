@@ -1,5 +1,9 @@
 # StarlightBreaker Handoff
 
+## Entry Points
+- [README.md](README.md)
+- [StarlightBreaker.Dalamud/Plugin.cs](StarlightBreaker.Dalamud/Plugin.cs)
+
 ## Summary
 - Maintenance target is `StarlightBreaker.Dalamud`
 - This round of work focused on making the Dalamud plugin load correctly on the current `XIVLauncherCN` environment and wiring up automatic GitHub releases
@@ -10,6 +14,7 @@
 - GitHub Actions now builds and publishes release assets when a matching `v*` tag is pushed
 - A pull request to upstream was opened from fork `main`:
   - `https://github.com/Loskh/StarlightBreaker/pull/20`
+- The current crash investigation found the Party Finder path to be the highest-risk area, and the fix replaced the destructive callsite hook with a standard Dalamud `Hook<T>` plus exception guards
 
 ## What Was Fixed Today
 - Adapted the plugin to the current API 15 environment used by `XIVLauncherCN`
@@ -23,6 +28,9 @@
   - `FontConfig.Italics`
   - `FontConfig.EnableColor`
   - `PartyFinderConfig.Enable` was already enabled by default
+- Reworked the Party Finder detailed-window hook to avoid the custom `AsmHook`/`DoNotExecuteOriginal` path
+- Added try/catch fallbacks around the chat log and Party Finder detours so hook failures fall back to the original call instead of crashing the process
+- Removed the obsolete `CallHook.cs` helper
 
 ## Root Cause
 - The machine had multiple local Dalamud installations:
@@ -32,6 +40,7 @@
 - Because of that mismatch, the plugin compiled successfully but failed at runtime with API-shape differences such as:
   - missing `Dalamud.Game.ISigScanner`
   - old/new `WindowSystem.AddWindow(...)` signature mismatch
+- The recruitment-panel crash path likely came from the custom callsite hook around Party Finder text filtering, which used a destructive patch and was the most brittle part of the plugin
 
 ## Current Build Configuration
 - Project file: [StarlightBreaker.Dalamud/StarlightBreaker.csproj](StarlightBreaker.Dalamud/StarlightBreaker.csproj)
@@ -55,6 +64,7 @@
 - Verified the produced assembly references the active CN dev environment
 - Verified the built plugin no longer exposes scanner injection properties that break current runtime loading
 - Verified the built plugin references `WindowSystem.AddWindow(IWindow)` in assembly metadata
+- Verified the project still builds successfully after removing `CallHook.cs`
 
 ## Remaining Notes
 - Existing local user config is not force-migrated; default option changes only affect new configs
@@ -64,3 +74,4 @@
   - whether `XIVLauncherCN` is still the actual runtime host
   - whether local overrides or `DALAMUD_HOME` still point to the same host's `addon\Hooks\dev`
   - whether the built output in `Output/` is the file actually loaded by Dalamud
+- If the recruitment panel crashes again, the next suspect is another plugin with hook verification failures, especially `Saucy`

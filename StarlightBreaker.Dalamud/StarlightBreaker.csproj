@@ -2,14 +2,14 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 	<PropertyGroup>
 		<Name>StarlightBreaker</Name>
-		<Version>2.15.3</Version>
-		<!-- Prefer XIVLauncherCN locally; CI falls back to the SDK default or DALAMUD_HOME. -->
+		<Version>2.15.4</Version>
+		<!-- 本地优先使用 XIVLauncherCN；CI 回退到 SDK 默认路径或 DALAMUD_HOME。 / Prefer XIVLauncherCN locally; CI falls back to the SDK default or DALAMUD_HOME. -->
 		<DalamudLibPath Condition="'$(DALAMUD_HOME)' == '' and Exists('$(AppData)\XIVLauncherCN\addon\Hooks\dev\')">$(AppData)\XIVLauncherCN\addon\Hooks\dev\</DalamudLibPath>
 		<TargetFramework>net10.0-windows</TargetFramework>
 		<AssemblySearchPaths>{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory};{RawFileName};$(DalamudLibPath)</AssemblySearchPaths>
 		<Author>Loskh</Author>
-		<Punchline>解除聊天日志和招募板中的屏蔽词显示</Punchline>
-		<Description>解除聊天日志与招募板中的屏蔽词过滤，并可选择用颜色和斜体高亮被替换的文本片段，方便阅读、排查和分享内容。</Description>
+		<Punchline>解除聊天日志和招募板中的屏蔽词显示 / Show filtered chat and Party Finder text</Punchline>
+		<Description>解除聊天日志与招募板中的屏蔽词过滤，让原始消息内容可以直接查看；也可以用自定义颜色和斜体高亮被替换的文本片段，方便识别、排查和分享。 / Disables censorship filtering in chat logs and Party Finder text so the original message content can be viewed. Optionally highlights replaced text with custom color and italic styling to make filtered segments easier to identify, review, and share.</Description>
 		<Tags>chat;party-finder;filter;censorship;uncensor</Tags>
 		<CategoryTags>chat;party-finder;filter</CategoryTags>
 		<PackageProjectUrl>https://github.com/anmili2022/StarlightBreaker</PackageProjectUrl>
